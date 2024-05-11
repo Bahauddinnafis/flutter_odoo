@@ -1,11 +1,12 @@
 // ignore_for_file: unused_local_variable, avoid_print, unused_element, prefer_final_fields
 
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'buku.dart';
 import 'config.dart';
 import 'package:odoo_rpc/odoo_rpc.dart';
-import 'package:provider/provider.dart';
-import 'session_manager.dart'; // import class yang sudah dibuat
+// import 'package:provider/provider.dart';
+// import 'session_manager.dart'; // import class yang sudah dibuat
 
 // import 'package:hive/hive.dart';
 
@@ -53,14 +54,15 @@ class _LoginState extends State<Login> {
       final rrr = await client.authenticate(AppConfig.database,
           _userNameController.text, _passwordController.text);
       OdooSession session = rrr; // autentikasi dan dapatkan session
-      if (mounted) {
-        Provider.of<SessionManager>(context, listen: false).setSession(session);
-      }
+      // if (mounted) {
+      //   Provider.of<SessionManager>(context, listen: false).setSession(session);
+      // }
 
       print(session);
       print('Authenticated');
-      // var odooBox = Hive.box('odoo');
-      // odooBox.put('orpc', session);
+      var odooBox = Hive.box('odoo');
+      odooBox.put('username', _userNameController.text);
+      odooBox.put('password', _passwordController.text);
 
       // simpan ke hive
       // redirect ke halaman login
