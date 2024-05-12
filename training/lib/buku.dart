@@ -1,13 +1,89 @@
-// ignore_for_file: prefer_final_fields
+// ignore_for_file: prefer_final_fields, unused_local_variable, unused_field, prefer_const_constructors_in_immutables, use_key_in_widget_constructors, library_private_types_in_public_api, prefer_const_constructors
 
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:odoo_rpc/odoo_rpc.dart';
 import 'config.dart';
-import 'package:provider/provider.dart';
-import 'session_manager.dart'; // import class yang sudah dibuat
+// import 'package:provider/provider.dart';
+// import 'session_manager.dart'; // import class yang sudah dibuat
 
 // import 'package:hive/hive.dart';
+
+class EditBukuPop extends StatefulWidget {
+  final int id;
+  final String namaBuku;
+
+  EditBukuPop(this.id, this.namaBuku);
+
+  @override
+  _EditBukuPopState createState() => _EditBukuPopState();
+}
+
+class _EditBukuPopState extends State<EditBukuPop> {
+  TextEditingController _textEditingController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _textEditingController = TextEditingController(text: widget.namaBuku);
+  }
+
+  Future<void> updateKeOdoo(int id, String namaBuku) async {
+    const baseUrl = AppConfig.odooUrl;
+    final client = OdooClient(baseUrl);
+
+    var odooBox = await Hive.openBox('odoo');
+    String username = odooBox.get('username');
+    String password = odooBox.get('password');
+
+    final session =
+        await client.authenticate(AppConfig.database, username, password);
+
+    var res = await client.callKw({
+      'model': 'product.template',
+      'method': 'write',
+      'args': [
+        id,
+        {
+          'name': namaBuku,
+        },
+      ],
+      'kwargs': {},
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      // title: Text('Edit Buku ${widget.id}'),
+      title: Text('Edit Buku'),
+      content: TextField(
+        controller: _textEditingController,
+        decoration: InputDecoration(hintText: widget.namaBuku),
+      ),
+      actions: <Widget>[
+        MaterialButton(
+          onPressed: () {
+            // Aksi ketika tombol Update ditekan
+            String newText = _textEditingController.text;
+            updateKeOdoo(widget.id, newText);
+            // Lakukan sesuatu dengan newText
+            Navigator.of(context).pop();
+            // refresh tampilan
+          },
+          child: Text('Update'),
+        ),
+        MaterialButton(
+          onPressed: () {
+            // Aksi ketika tombol Cancel ditekan
+            Navigator.of(context).pop();
+          },
+          child: Text('Cancel'),
+        ),
+      ],
+    );
+  }
+}
 
 class Buku extends StatefulWidget {
   const Buku({super.key});
@@ -42,6 +118,18 @@ class _BukuState extends State<Buku> {
     // });
   }
 
+  void editBukuPop(int id, String namaBuku) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return EditBukuPop(id, namaBuku);
+      },
+    ).then((_) {
+      // Panggil fungsi AAA ketika dialog ditutup
+      loadOdoo();
+    });
+  }
+
   Future<void> loadOdoo() async {
     var odooBox = await Hive.openBox('odoo');
     username = odooBox.get('username');
@@ -60,12 +148,14 @@ class _BukuState extends State<Buku> {
       'kwargs': {
         'fields': ['id', 'name'],
         'domain': [
-          ['categ_id', '=', 1]
+          ['categ_id', '=', 1],
+          ['active', '=', true]
         ],
       },
     });
     dataRows = [];
     for (var buku in bukus) {
+      // buku['id']
       String name = buku["name"];
       setState(() {
         dataRows.add(
@@ -74,7 +164,7 @@ class _BukuState extends State<Buku> {
             DataCell(
               ElevatedButton(
                 onPressed: () {
-                  // editBukuPop();
+                  editBukuPop(buku['id'], name);
                   // Logika untuk mengedit
                 },
                 child: Text('Edit'),
@@ -82,8 +172,26 @@ class _BukuState extends State<Buku> {
             ),
             DataCell(
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   // Logika untuk menghapus
+                  final session = await client.authenticate(
+                      AppConfig.database, username, password);
+                  // active
+                  var res = await client.callKw({
+                    'model': 'product.template',
+                    'method': 'write',
+                    'args': [
+                      buku['id'],
+                      {
+                        'active': false,
+                      },
+                    ],
+                    'kwargs': {},
+                  });
+                  String www = 'rrr';
+                  setState(() {
+                    loadOdoo();
+                  });
                 },
                 child: Text('Delete'),
               ),
