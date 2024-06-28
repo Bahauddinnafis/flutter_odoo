@@ -125,7 +125,6 @@ class _BukuState extends State<Buku> {
         return EditBukuPop(id, namaBuku);
       },
     ).then((_) {
-      // Panggil fungsi AAA ketika dialog ditutup
       loadOdoo();
     });
   }
@@ -140,65 +139,79 @@ class _BukuState extends State<Buku> {
     final session =
         await client.authenticate(AppConfig.database, username, password);
 
-    var bukus = await client.callKw({
-      //tipenya list
-      'model': 'product.template',
-      'method': 'search_read',
-      'args': [],
-      'kwargs': {
-        'fields': ['id', 'name'],
-        'domain': [
-          ['categ_id', '=', 1],
-          ['active', '=', true]
-        ],
-      },
-    });
-    dataRows = [];
-    for (var buku in bukus) {
-      // buku['id']
-      String name = buku["name"];
-      setState(() {
-        dataRows.add(
-          DataRow(cells: [
-            DataCell(Text(name)),
-            DataCell(
-              ElevatedButton(
-                onPressed: () {
-                  editBukuPop(buku['id'], name);
-                  // Logika untuk mengedit
-                },
-                child: Text('Edit'),
-              ),
-            ),
-            DataCell(
-              ElevatedButton(
-                onPressed: () async {
-                  // Logika untuk menghapus
-                  final session = await client.authenticate(
-                      AppConfig.database, username, password);
-                  // active
-                  var res = await client.callKw({
-                    'model': 'product.template',
-                    'method': 'write',
-                    'args': [
-                      buku['id'],
-                      {
-                        'active': false,
-                      },
-                    ],
-                    'kwargs': {},
-                  });
-                  String www = 'rrr';
-                  setState(() {
-                    loadOdoo();
-                  });
-                },
-                child: Text('Delete'),
-              ),
-            ),
-          ]),
-        );
+    try {
+      var bukus = await client.callKw({
+        'model': 'product.template',
+        'method': 'search_read',
+        'args': [],
+        'kwargs': {
+          'fields': [
+            'id',
+            'name',
+            'is_book',
+            'qty',
+            'qty_pinjam',
+            'book_available',
+            'categ_id',
+            'active'
+          ],
+          'domain': [
+            [
+              'is_book',
+              '=',
+              true
+            ], 
+            ['active', '=', true]
+          ],
+        },
       });
+      dataRows = [];
+      print('Books loaded from Odoo: $bukus'); 
+      for (var buku in bukus) {
+        String name = buku["name"];
+        print(
+            'Book: ${buku["id"]}, Name: $name, Is Book: ${buku["is_book"]}, Qty: ${buku["qty"]}, Qty Pinjam: ${buku["qty_pinjam"]}, Book Available: ${buku["book_available"]}, Categ ID: ${buku["categ_id"]}, Active: ${buku["active"]}');
+        setState(() {
+          dataRows.add(
+            DataRow(cells: [
+              DataCell(Text(name)),
+              DataCell(
+                ElevatedButton(
+                  onPressed: () {
+                    editBukuPop(buku['id'], name);
+                  },
+                  child: Text('Edit'),
+                ),
+              ),
+              DataCell(
+                ElevatedButton(
+                  onPressed: () async {
+                    final session = await client.authenticate(
+                        AppConfig.database, username, password);
+                    var res = await client.callKw({
+                      'model': 'product.template',
+                      'method': 'write',
+                      'args': [
+                        buku['id'],
+                        {
+                          'active': false,
+                        },
+                      ],
+                      'kwargs': {},
+                    });
+                    setState(() {
+                      loadOdoo();
+                    });
+                  },
+                  child: Text('Delete'),
+                ),
+              ),
+            ]),
+          );
+        });
+      }
+    } on Exception catch (e) {
+      print('Gagal memuat data buku: $e');
     }
   }
 
@@ -227,12 +240,14 @@ class _BukuState extends State<Buku> {
       'args': [
         {
           'name': namaBuku,
-          'categ_id': 1,
+          'is_book': true, 
+          'categ_id': 1, 
+          'qty': 10 
         },
       ],
       'kwargs': {},
     });
-
+    print('Created Book ID: $bukuId');
     setState(() {
       loadOdoo();
     });
